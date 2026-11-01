@@ -12,6 +12,7 @@ from app.integrations.gmail.client import GmailClient
 from app.integrations.gmail.connection import get_gmail_client
 from app.integrations.calendar.oauth import GOOGLE_CALENDAR_SCOPES
 from app.integrations.google.oauth import GOOGLE_GMAIL_SCOPES, build_google_oauth_flow
+from app.integrations.google.access import google_access_guidance, google_authorization_error
 from app.security.tokens import TokenCipher
 from app.services.connection_store import ConnectionStore
 from app.services.runtime_state_store import RuntimeStateStore
@@ -127,6 +128,7 @@ def list_connections(db: Session = Depends(get_db)) -> dict:
         "user": {"id": settings.dev_user_id, "email": settings.dev_user_email},
         "connections": [_public_connection(item) for item in connections],
         "oauth_status": oauth_health,
+        "google_access": google_access_guidance(settings.google_oauth_publishing_status),
         "catalog": [
             {
                 "id": "gmail",
@@ -251,7 +253,7 @@ def google_connection_callback(
         return _frontend_redirect(status="error", provider="google", detail=detail)
     if error:
         runtime_state.delete(pkce_key)
-        detail = f"GoogleAuthorizationError: {str(error)[:240]}"
+        detail = google_authorization_error(error)
         _record_oauth_health(
             db,
             user_id=state_record.user_id,

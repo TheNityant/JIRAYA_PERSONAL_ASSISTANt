@@ -58,6 +58,8 @@ class Settings(BaseSettings):
 
     google_oauth_client_id: str = ""
     google_oauth_client_secret: str = ""
+    # Display guidance only; Google Cloud remains the authority on publishing/verification.
+    google_oauth_publishing_status: Literal["unknown", "testing", "production"] = "unknown"
     google_oauth_redirect_uri: str = "http://127.0.0.1:8000/connections/google/callback"
     google_calendar_oauth_redirect_uri: str = (
         "http://127.0.0.1:8000/connections/google/calendar/callback"

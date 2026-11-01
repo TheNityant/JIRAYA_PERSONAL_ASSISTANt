@@ -105,6 +105,7 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
   const [runResult, setRunResult] = useState<AutomationRunResponse | null>(null);
   const [executionDraft, setExecutionDraft] = useState("");
   const [connections, setConnections] = useState<ConnectionCatalogItem[]>([]);
+  const [googleAccessHelp, setGoogleAccessHelp] = useState("");
   const [notifications, setNotifications] = useState<JirayaNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationFilter, setNotificationFilter] = useState("ALL");
@@ -132,6 +133,7 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
   async function refreshConnections() {
     const response = await api.listConnections();
     setConnections(response.catalog);
+    setGoogleAccessHelp(response.google_access?.message ?? "");
   }
 
   async function refreshRuntime() {
@@ -497,6 +499,13 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
 
         <div className="sidebar-title-row connections-heading"><span>Connections</span></div>
         <div className="connection-list">
+          {googleAccessHelp && connections.some(item => (item.id === "gmail" || item.id === "google_calendar") && item.status !== "CONNECTED") && (
+            <details className="google-access-help">
+              <summary>Google connection help</summary>
+              <p>{googleAccessHelp}</p>
+              <p>Your Jiraya account and saved automations remain available while you resolve Google access.</p>
+            </details>
+          )}
           {connections.map((item) => (
             <div className="connection-card" key={item.id}>
               <div className="connection-copy">

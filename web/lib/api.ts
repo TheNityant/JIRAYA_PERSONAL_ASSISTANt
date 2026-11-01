@@ -75,6 +75,7 @@ export type ConnectionCatalogItem = {
 };
 
 export type ConnectionsResponse = {
+  google_access?: { publishing_status: "unknown" | "testing" | "production"; message: string };
   mode: string;
   user: { id: string; email: string };
   connections: Array<{

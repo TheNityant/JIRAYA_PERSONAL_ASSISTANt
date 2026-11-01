@@ -12,6 +12,7 @@ from app.db import get_db
 from app.integrations.calendar.client import CalendarClient
 from app.integrations.calendar.connection import get_calendar_client
 from app.integrations.calendar.oauth import GOOGLE_CALENDAR_SCOPES, build_calendar_oauth_flow
+from app.integrations.google.access import google_authorization_error
 from app.security.tokens import TokenCipher
 from app.services.connection_store import ConnectionStore
 from app.services.runtime_state_store import RuntimeStateStore
@@ -92,8 +93,9 @@ def calendar_connection_callback(
         return _frontend_redirect(status="error", detail="invalid_or_expired_state")
     if error:
         runtime.delete(_pkce_key(state))
-        _record_health(db, user_id=state_record.user_id, status="ERROR", detail=error)
-        return _frontend_redirect(status="error", detail=error)
+        detail = google_authorization_error(error)
+        _record_health(db, user_id=state_record.user_id, status="ERROR", detail=detail)
+        return _frontend_redirect(status="error", detail=detail)
     if not code or not verifier:
         detail = "missing_code" if not code else "pkce_verifier_missing_or_expired"
         runtime.delete(_pkce_key(state))
