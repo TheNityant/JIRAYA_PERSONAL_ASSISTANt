@@ -75,6 +75,7 @@ export default function AccountGate() {
       <label>Email<input required type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)}/></label>
       <label>Password<input required type="password" minLength={12} maxLength={128} autoComplete={signup ? "new-password" : "current-password"} value={password} onChange={(e) => setPassword(e.target.value)}/></label>
       {signup && <small>Use at least 12 characters.</small>}
+      {signup && <small>By creating an account, you agree to the <a href="/terms">Terms of Service</a>. Read our <a href="/privacy">Privacy Policy</a>, including how AI providers process automation data.</small>}
       {error && <p role="alert" className="account-error">{error}</p>}
       <button disabled={busy} className="primary-button">{busy ? "Please wait…" : signup ? "Create account" : "Sign in"}</button>
     </form>

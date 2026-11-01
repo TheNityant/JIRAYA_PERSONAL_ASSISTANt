@@ -58,6 +58,22 @@ button { cursor: pointer; }
 .google-access-help { border: 1px solid var(--border); border-radius: 10px; padding: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .google-access-help summary { cursor: pointer; color: var(--text); }
 .google-access-help p { margin: 8px 0 0; }
+.public-site-footer { padding: 28px clamp(20px, 5vw, 80px); border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 24px; justify-content: space-between; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.public-site-footer p { max-width: 680px; margin: 6px 0 0; }
+.public-site-footer strong { color: var(--text); }
+.public-site-footer nav { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+.public-site-footer a, .policy-shell a, .account-card small a { color: #b8c8ff; text-decoration: underline; text-underline-offset: 3px; }
+.policy-shell { max-width: 880px; padding: 28px clamp(20px, 5vw, 48px) 60px; margin: 0 auto; color: var(--text); line-height: 1.8; }
+.policy-shell nav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.policy-shell nav div { display: flex; gap: 20px; }
+.policy-shell article { padding-top: 40px; }
+.policy-shell h1 { font-size: clamp(32px, 6vw, 48px); line-height: 1.2; margin: 12px 0; }
+.policy-shell h2 { font-size: 21px; line-height: 1.4; margin: 32px 0 12px; }
+.policy-shell p, .policy-shell li { color: #c1c8d2; overflow-wrap: anywhere; }
+.policy-shell ul { padding-left: 22px; }
+.policy-shell li { margin-bottom: 12px; }
+.policy-shell .policy-updated, .policy-shell footer { color: var(--muted); font-size: 13px; }
+.policy-shell footer { margin-top: 40px; border-top: 1px solid var(--border); padding-top: 24px; overflow-wrap: anywhere; }
 .connection-card { border: 1px solid var(--border); border-radius: 10px; background: #0f1217; padding: 10px; display: flex; align-items: center; gap: 8px; justify-content: space-between; }
 .connection-copy { min-width: 0; }
 .connection-copy strong, .connection-copy span { display: block; }

@@ -1,0 +1,49 @@
+import type { Metadata } from "next";
+import PolicyLayout from "@/components/PolicyLayout";
+
+export const metadata: Metadata = {title: "Privacy Policy · Jiraya Personal Assistant"};
+
+export default function PrivacyPage() {
+  return <PolicyLayout title="Privacy Policy">
+    <p>Jiraya Personal Assistant is operated by Nityant Tiwari. It connects services you authorize to run personal automations, including email workflows, calendar scheduling, GitHub actions and optional local meeting attendance. This policy explains the information processed to provide those features.</p>
+
+    <h2>Information we process</h2>
+    <ul>
+      <li><strong>Account information:</strong> your name, email address, a password hash and sign-in session records. Jiraya does not store your account password as plain text.</li>
+      <li><strong>Connected accounts:</strong> provider account identifiers, granted permissions, encrypted OAuth credentials and connection status. Google and GitHub handle their own sign-in screens; Jiraya does not ask for their passwords.</li>
+      <li><strong>Gmail:</strong> message identifiers, senders, recipients, subjects, message content and thread information needed to evaluate your email automations and prepare or send authorized replies.</li>
+      <li><strong>Google Calendar:</strong> calendar identity and time zone, event titles, dates, descriptions, meeting links, attendees and availability needed for scheduling and event monitoring.</li>
+      <li><strong>GitHub:</strong> repository information, issues, pull requests, workflow information and actions requested through your configured integrations.</li>
+      <li><strong>Automation records:</strong> saved rules, instructions, generated replies, proposed actions, execution results, notifications and verification evidence. These records may contain excerpts or content from connected services.</li>
+      <li><strong>Technical information:</strong> application errors and operational logs. Hosting providers may also process request and network metadata to deliver and secure the service.</li>
+    </ul>
+
+    <h2>How information is used</h2>
+    <p>We use this information to authenticate you, maintain account-specific connections, evaluate your configured conditions, execute authorized actions, check outcomes and troubleshoot failures. Enabled background automations can continue while you are signed out or the website is closed, provided the relevant backend is running and authorization remains valid. Signing out does not disable saved automations.</p>
+
+    <h2>AI processing and service providers</h2>
+    <p>Jiraya uses Nebius Token Factory for AI inference. When an AI-based automation runs, relevant message content, your instructions and task context may be sent to that service to interpret the request or generate a response. Do not enable these automations for information you are not permitted to share with the configured AI provider.</p>
+    <p>The deployed service uses Vercel for its frontend and API proxy and Render for its backend; the configured database stores account, connection and automation records. These infrastructure providers process information necessary to host the service. Google and GitHub process requests made to their respective APIs. Their own policies and the operator’s provider configurations also govern their processing and retention.</p>
+    <p>The optional Hermes developer briefing pilot, when enabled by the operator for its designated account, sends selected GitHub activity and briefing instructions to the configured Hermes service. It is separate from normal Gmail and Calendar automation.</p>
+    <p>Jiraya does not sell personal information or use Google user data for advertising. Jiraya does not use data obtained through Google Workspace APIs to develop, improve or train generalized or non-personalized AI or machine-learning models; AI requests are used for the user-facing task.</p>
+
+    <h2>Google API Limited Use</h2>
+    <p>Jiraya’s use and transfer of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a> and the <a href="https://developers.google.com/workspace/workspace-api-user-data-developer-policy">Google Workspace API User Data and Developer Policy</a>, including their Limited Use requirements. Transfers are limited to providing the features you use, permitted security purposes, applicable legal requirements or other uses allowed by those policies.</p>
+    <p>Human access to Google user data is restricted to purposes permitted by those policies, such as your affirmative agreement to inspect specific information for support, necessary security investigations or legal requirements. A public privacy policy does not mean Google has verified or endorsed Jiraya.</p>
+
+    <h2>Local companion and Meet attendance</h2>
+    <p>If you pair a local companion, your browser stores pairing details locally to reconnect that device. The companion stores local configuration, repository settings and, when enabled, a scoped device credential, meeting history and a dedicated Google browser profile. Local Git operations use credentials available on your computer. A requested push sends committed repository content to the configured Git remote.</p>
+    <p>Optional Meet attendance reads eligible Calendar meeting details through Jiraya and opens Google Meet on your paired computer. The current attendance feature does not record, transcribe, summarize or speak in the meeting. Browser sign-in and host admission may be required. Pausing attendance and leaving an active call are separate from closing the website. Local files and browser profiles are not removed merely by signing out of Jiraya.</p>
+
+    <h2>Storage, retention and security</h2>
+    <p>OAuth credentials are encrypted in the application database and Jiraya passwords are stored as hashes. These protections do not eliminate all security risks. Account information, rules and execution records are retained to operate your workspace until removed through an available control or a deletion request is processed; there is currently no fixed automatic purge interval for all records.</p>
+    <p>Disconnecting a connector clears its active stored OAuth credential and stops future access through that connection. It does not automatically delete previous execution records or undo emails, events or GitHub changes already created. Hosting logs and backups may follow the applicable provider settings and retention practices.</p>
+
+    <h2>Your controls and deletion requests</h2>
+    <p>You can disable automations, disconnect providers, pause Meet attendance and forget browser pairing through the available controls. You can also revoke Jiraya access in your <a href="https://myaccount.google.com/connections">Google Account connections</a> or GitHub application settings.</p>
+    <p>To request access to, correction of or deletion of your account and associated data, email <a href="mailto:nityant.tiwari2404@gmail.com">nityant.tiwari2404@gmail.com</a> from your registered address. We may verify ownership before acting. Account deletion currently requires contacting the operator; there is no self-service delete-account button. You may need to separately remove local companion files and browser profiles or delete data already created in a connected service.</p>
+
+    <h2>Policy changes and contact</h2>
+    <p>Updates will be published here with a revised date. Material changes to Google data use require appropriate notice and consent before that new use. For privacy questions, contact Nityant Tiwari at the address above.</p>
+  </PolicyLayout>;
+}

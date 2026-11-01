@@ -20,6 +20,18 @@ Changing an environment variable cannot change Google's publishing or review sta
    configure a custom domain where required for verification. The privacy policy must
    explain actual Google data collection, storage, deletion and model-provider transfers.
    Do not claim that no third party processes email when it is sent to a model API.
+   Public `/privacy` and `/terms` pages are included in the frontend. With the
+   current production hostname, enter these links in Branding after deployment:
+
+   - Home: `https://jiraya-personal-assistant.vercel.app/`
+   - Privacy: `https://jiraya-personal-assistant.vercel.app/privacy`
+   - Terms: `https://jiraya-personal-assistant.vercel.app/terms`
+
+   The operator must review these disclosures against the actual deployed database,
+   AI-provider data handling and retention settings before public onboarding.
+   Updating pages does not configure a provider's retention or training settings,
+   complete a security assessment or establish verified domain ownership. If you
+   configure a custom production domain, update all three Branding URLs accordingly.
 3. Under **Clients**, create/select a **Web application** OAuth client. Keep the
    client secret on Render only. With the existing Vercel API proxy, register these
    exact redirect URIs (replace the domain if your production domain differs):
