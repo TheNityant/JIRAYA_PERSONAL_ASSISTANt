@@ -25,7 +25,7 @@ async function main(){
   if(url.pathname==='/automation-executions')return json(url.searchParams.get('automation_id')==='calendar-rule'?[execution]:[]);
   if(url.pathname==='/gmail/inbox/recent')return json({items:[{id:'chosen-email',subject:'Chosen interview',sender:'sender@example.test'}]});
   if(url.pathname.endsWith('/preview/gmail')){calls.push({path:url.pathname,body:JSON.parse(body)});return json({message:{id:'chosen-email',subject:'Chosen interview'},match:{matches:true,confidence:1,reason:'Fixture match'}});}
-  if(url.pathname.endsWith('/run/gmail')){calls.push({path:url.pathname,body:JSON.parse(body)});execution={...execution,status:'AWAITING_APPROVAL',source_event_id:JSON.parse(body).message_id,output:{source_links:['https://meet.google.com/abc-defg-hij'],proposal:{summary:'Fixture interview',start:'2026-11-02T15:00:00+05:30',end:'2026-11-02T16:00:00+05:30'}}};return json({decision:'AWAITING_APPROVAL',execution});}
+  if(url.pathname.endsWith('/run/gmail')){calls.push({path:url.pathname,body:JSON.parse(body)});execution={...execution,status:'AWAITING_APPROVAL',source_event_id:JSON.parse(body).message_id || 'chosen-email',output:{source_links:['https://meet.google.com/abc-defg-hij'],proposal:{summary:'Fixture interview',start:'2026-11-02T15:00:00+05:30',end:'2026-11-02T16:00:00+05:30'}}};return json({decision:'AWAITING_APPROVAL',execution});}
   if(url.pathname==='/notifications')return json({items:[],unread_count:0});
   if(url.pathname==='/obligations')return json([]);
   if(url.pathname==='/runtime/gmail/status')return json({background_monitor_enabled:true,background_monitor_configured:true,poll_seconds:15,last_poll_at:'2026-10-30T10:00:00Z',mailbox:user.email});
@@ -69,23 +69,23 @@ async function main(){
   await page.getByRole('button',{name:'Quick start guide',exact:true}).click();await page.getByRole('dialog').waitFor();
   await page.getByRole('button',{name:'Close quick start guide',exact:true}).click();
   await page.getByRole('button',{name:/Saved email to Calendar/}).click();
-  const debug=page.getByRole('region',{name:'Automation testing and execution'});await debug.waitFor();
+  assert.equal(await page.getByRole('region',{name:'Automation testing and execution'}).count(),0);
+  const debug=page.locator('.topbar-actions');await debug.getByRole('button',{name:'Debug · Run latest',exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'Choose inbox email',exact:true}).count(),0);
   await page.getByText('Fixture: missing meeting start time',{exact:true}).waitFor();
   if(process.env.JIRAYA_UI_SCREENSHOT)await page.screenshot({path:process.env.JIRAYA_UI_SCREENSHOT});
   await page.getByRole('button',{name:'Retry this email',exact:true}).click();
   await page.getByRole('button',{name:'Approve & Create event',exact:true}).waitFor();
   assert.deepEqual(calls.at(-1).body,{message_id:'prior-email',force:true});
-  await debug.getByRole('button',{name:'Choose inbox email',exact:true}).click();
-  await debug.getByLabel('Source email',{exact:true}).selectOption('chosen-email');
   await debug.getByRole('button',{name:'Debug · Test match',exact:true}).click();
   await page.getByText('Fixture match',{exact:false}).waitFor();
-  assert(calls.at(-1).path.endsWith('/preview/gmail'));assert.deepEqual(calls.at(-1).body,{message_id:'chosen-email'});
-  await debug.getByRole('button',{name:'Execute',exact:true}).click();
+  assert(calls.at(-1).path.endsWith('/preview/gmail'));assert.deepEqual(calls.at(-1).body,{message_id:null});
+  await debug.getByRole('button',{name:'Debug · Run latest',exact:true}).click();
   await page.getByRole('button',{name:'Approve & Create event',exact:true}).waitFor();
-  assert(calls.at(-1).path.endsWith('/run/gmail'));assert.deepEqual(calls.at(-1).body,{message_id:'chosen-email',force:false});
+  assert(calls.at(-1).path.endsWith('/run/gmail'));assert.deepEqual(calls.at(-1).body,{message_id:null,force:false});
   await page.getByRole('textbox',{name:'Name',exact:true}).fill('Unsaved rule changes');
   assert.equal(await debug.getByRole('button',{name:'Debug · Test match',exact:true}).isEnabled(),false);
-  assert.equal(await debug.getByRole('button',{name:'Execute',exact:true}).isEnabled(),false);
+  assert.equal(await debug.getByRole('button',{name:'Debug · Run latest',exact:true}).isEnabled(),false);
   await page.reload();await page.getByRole('heading',{name:'Saved email to Calendar',exact:true}).waitFor();await page.getByRole('button',{name:'Approve & Create event',exact:true}).waitFor();
   disconnected=true;await page.reload();await page.getByRole('heading',{name:'Saved email to Calendar',exact:true}).waitFor(); // Saved rules survive connector attention.
   disconnected=false;
@@ -105,7 +105,7 @@ async function main(){
   await page.getByRole('heading',{name:'Saved email to Calendar',exact:true}).waitFor();await page.getByRole('button',{name:'GitHub',exact:true}).click();
   await panel.getByText('2 open Git projects · 2 enabled',{exact:true}).waitFor();assert.equal(claims,1);
   user.id='another-user';await page.reload();await page.getByRole('dialog').waitFor();await page.keyboard.press('Escape');await page.getByRole('button',{name:'GitHub',exact:true}).click();await panel.getByRole('button',{name:'Connect with VS Code',exact:true}).waitFor();assert.equal(claims,1);
-  await context.close();console.log('PASS: guide, account isolation, restored Gmail-Calendar debug and execute, selected email preview, policy-respecting run, unsaved-rule guard, saved failure retry, approval, refresh, companion handoff, Meet controls and persistent multi-repository pairing');
+  await context.close();console.log('PASS: guide, account isolation, original header debug buttons, no separate test panel, latest email preview, policy-respecting run, unsaved-rule guard, saved failure retry, approval, refresh, companion handoff, Meet controls and persistent multi-repository pairing');
  }finally{
   if(browser)await browser.close();if(server){try{process.kill(-server.pid,'SIGTERM');}catch{}server.stdout.destroy();server.stderr.destroy();server.unref();}
   for(const service of [backend,companion]){service.closeAllConnections();await new Promise(resolve=>service.close(resolve));}

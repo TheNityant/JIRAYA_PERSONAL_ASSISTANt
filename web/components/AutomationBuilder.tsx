@@ -5,7 +5,7 @@ import GitHubWorkspace from "@/components/GitHubWorkspace";
 import { branchNameError, repositoryError } from "@/lib/github-validation";
 import CalendarWorkspace from "@/components/CalendarWorkspace";
 import AutomationCanvas from "@/components/AutomationCanvas";
-import { actionLabels, actionsFor, calendarScheduling, isConnected, routeReady, services } from "@/lib/automation-graph";
+import { actionLabels, actionsFor, isConnected, routeReady, services } from "@/lib/automation-graph";
 
 import { useEffect, useState } from "react";
 import MeetWorkspace from "./MeetWorkspace";
@@ -113,11 +113,9 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
   const [obligationFilter, setObligationFilter] = useState<"OPEN" | "RESOLVED">("OPEN");
   const [runtime, setRuntime] = useState<GmailRuntimeStatus | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
-  const [debugMessageId, setDebugMessageId] = useState("");
   const [debugBusy, setDebugBusy] = useState(false);
   const [debugError, setDebugError] = useState("");
   const [history, setHistory] = useState<AutomationExecution[]>([]);
-  const [inbox, setInbox] = useState<Array<{id: string; subject: string; sender: string}>>([]);
   const canSave = routeReady(draft, connections);
   const allowedActions = actionsFor(draft.source, connections);
 
@@ -161,7 +159,7 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
         const rows = await api.listExecutions(selected.id);
         if (cancelled) return;
         setHistory(rows);
-        const latest = rows.find(row => !debugMessageId || row.source_event_id === debugMessageId);
+        const latest = rows[0];
         if (latest) {
           setRunResult(current => {
             const updated = current?.execution && rows.find(row => row.id === current.execution?.id);
@@ -174,7 +172,7 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
     void load();
     const timer = window.setInterval(load, 10000);
     return () => {cancelled = true;window.clearInterval(timer);};
-  }, [selected?.id, activeView, debugMessageId]);
+  }, [selected?.id, activeView]);
 
   useEffect(() => {
     const loaded = Promise.all([refresh(), refreshConnections(), refreshOperations()]);
@@ -215,7 +213,7 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
     setConfigurationError(""); setSyncNotice(null);
     setSelected(item);
     if (item) localStorage.setItem(`jiraya.automation:${accountId}`, item.id);
-    setDebugMessageId(""); setDebugError(""); setHistory([]);
+    setDebugError(""); setHistory([]);
     setPreview(null);
     setRunResult(null);
     setExecutionDraft("");
@@ -328,21 +326,12 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
     setDebugBusy(true); setDebugError("");
     setStatus("Debug: testing latest Gmail...");
     try {
-      const result = await api.previewGmail(selected.id, debugMessageId || undefined);
+      const result = await api.previewGmail(selected.id);
       setPreview(result);
-      if (result.message?.id) setDebugMessageId(result.message.id);
       setStatus(result.match?.matches ? "Latest email matched" : "Latest email did not match");
     } catch (error: any) {
       setStatus(`Preview failed: ${error.message}`); setDebugError(error.message);
     }
-    finally {setDebugBusy(false);}
-  }
-
-  async function loadDebugInbox() {
-    if (debugBusy) return;
-    setDebugBusy(true); setDebugError("");
-    try {setInbox((await api.recentInbox()).items);}
-    catch (error: any) {setDebugError(`Could not load inbox: ${error.message}`);}
     finally {setDebugBusy(false);}
   }
 
@@ -371,7 +360,7 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
     setDebugBusy(true); setDebugError("");
     setStatus("Debug: running automation on selected Gmail...");
     try {
-      const result = await api.runGmailAutomation(selected.id, messageId || debugMessageId || undefined, force);
+      const result = await api.runGmailAutomation(selected.id, messageId || undefined, force);
       setRunResult(result);
       setExecutionDraft(result.execution?.draft_body ?? "");
       setStatus(`Execution: ${nice(result.decision)}`);
@@ -559,6 +548,10 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
               </div>
               <div className="topbar-actions">
                 {selected && <button className="secondary-button" onClick={() => beginAutomation()}>New automation</button>}
+                {selected?.source === "gmail" && <>
+                  <button className="ghost-button" disabled={debugBusy || isDirty || isSaving} title="Preview the latest inbox email without executing. Save changes before testing." onClick={testLatestEmail}>Debug · Test match</button>
+                  <button className="ghost-button" disabled={debugBusy || isDirty || isSaving} title="Execute on the latest inbox email using the saved approval policy." onClick={() => runLatestEmail(false)}>Debug · Run latest</button>
+                </>}
                 {selected && selected.source !== "gmail" && <button className="ghost-button" disabled={isSyncing} onClick={() => runLatestEmail(false)}>{selected.source === "github" ? "Sync GitHub" : "Sync Calendar"}</button>}
                 <button className="secondary-button configuration-toggle" onClick={() => setInspectorOpen(!inspectorOpen)} aria-expanded={inspectorOpen}>Configure</button>
                 <button className="primary-button" onClick={save} disabled={isSaving || !canSave}>{isSaving ? "Saving..." : selected ? "Save changes" : "Create automation"}</button>
@@ -566,22 +559,7 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
             </header>
 
             {syncNotice && <div className={`sync-notice ${syncNotice.error ? "error" : ""}`} role={syncNotice.error ? "alert" : "status"}>{syncNotice.message}</div>}
-            {draft.source === "gmail" && (draft.action_config.type === "CREATE_CALENDAR_EVENT" || calendarScheduling(draft)) && (
-              <section className="automation-debug" aria-label="Automation testing and execution">
-                <div className="debug-controls">
-                  <label>Source email<select aria-label="Source email" value={debugMessageId} disabled={debugBusy} onChange={event => {setDebugMessageId(event.target.value); setPreview(null); setRunResult(null); setDebugError("");}}>
-                    <option value="">Newest inbox email</option>
-                    {debugMessageId && !inbox.some(message => message.id === debugMessageId) && <option value={debugMessageId}>{preview?.message?.subject || "Previewed email"}</option>}
-                    {inbox.map(message => <option key={message.id} value={message.id}>{message.subject || "(No subject)"} · {message.sender}</option>)}
-                  </select></label>
-                  <button className="ghost-button" disabled={debugBusy || !selected || isDirty || isSaving} onClick={loadDebugInbox}>Choose inbox email</button>
-                  <button className="secondary-button" disabled={debugBusy || !selected || isDirty || isSaving} onClick={testLatestEmail}>Debug · Test match</button>
-                  <button className="primary-button" disabled={debugBusy || !selected || isDirty || isSaving} onClick={() => runLatestEmail(false)}>Execute</button>
-                </div>
-                <p>{!selected || isDirty ? "Save this automation before testing." : debugBusy ? "Processing email…" : "Debug previews the match. Execute follows your saved approval policy; automatic actions can create an event immediately."}</p>
-                {debugError && <p role="alert">{debugError}</p>}
-              </section>
-            )}
+            {debugError && <div className="sync-notice error" role="alert">{debugError}</div>}
             <AutomationCanvas draft={draft} connections={connections} onSource={selectSource} onAction={(action) => updateAction("type", action)}/>
 
             {preview && (
