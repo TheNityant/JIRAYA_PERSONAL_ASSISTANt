@@ -7,12 +7,11 @@ import CalendarWorkspace from "@/components/CalendarWorkspace";
 import AutomationCanvas from "@/components/AutomationCanvas";
 import { actionLabels, actionsFor, isConnected, routeReady, services } from "@/lib/automation-graph";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import MeetWorkspace from "./MeetWorkspace";
 import {
   api,
   Automation,
-  AutomationExecution,
   AutomationInput,
   AutomationRunResponse,
   ConnectionCatalogItem,
@@ -115,7 +114,7 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [debugBusy, setDebugBusy] = useState(false);
   const [debugError, setDebugError] = useState("");
-  const [history, setHistory] = useState<AutomationExecution[]>([]);
+  const debugGeneration = useRef(0);
   const canSave = routeReady(draft, connections);
   const allowedActions = actionsFor(draft.source, connections);
 
@@ -151,28 +150,28 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
     setRuntime(runtimeResponse);
   }
 
+  // Refresh only an execution explicitly opened by a debug run or notification.
+  // Never populate the debug area from historical/background executions on page load.
+  const displayedExecutionId = runResult?.execution?.id;
   useEffect(() => {
-    if (!selected || activeView !== "AUTOMATIONS") return;
+    if (!selected || activeView !== "AUTOMATIONS" || !displayedExecutionId) return;
     let cancelled = false;
-    const load = async () => {
+    const timer = window.setInterval(async () => {
       try {
-        const rows = await api.listExecutions(selected.id);
-        if (cancelled) return;
-        setHistory(rows);
-        const latest = rows[0];
-        if (latest) {
-          setRunResult(current => {
-            const updated = current?.execution && rows.find(row => row.id === current.execution?.id);
-            return updated ? {...current, execution: updated} : current || {decision: latest.status, execution: latest};
-          });
-          setExecutionDraft(current => current || latest.draft_body);
-        }
-      } catch (error: any) {if (!cancelled) setDebugError(`Could not load saved executions: ${error.message}`);}
-    };
-    void load();
-    const timer = window.setInterval(load, 10000);
-    return () => {cancelled = true;window.clearInterval(timer);};
-  }, [selected?.id, activeView]);
+        const updated = await api.getExecution(displayedExecutionId);
+        if (!cancelled) setRunResult(current => current?.execution?.id === updated.id
+          ? {...current, execution: updated} : current);
+      } catch (error: any) {if (!cancelled) setDebugError(`Could not refresh execution: ${error.message}`);}
+    }, 10000);
+    return () => {cancelled = true; window.clearInterval(timer);};
+  }, [selected?.id, activeView, displayedExecutionId]);
+
+  useEffect(() => {
+    if (activeView === "AUTOMATIONS") return;
+    debugGeneration.current++;
+    setPreview(null); setRunResult(null); setExecutionDraft("");
+    setDebugError(""); setDebugBusy(false);
+  }, [activeView]);
 
   useEffect(() => {
     const loaded = Promise.all([refresh(), refreshConnections(), refreshOperations()]);
@@ -213,7 +212,8 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
     setConfigurationError(""); setSyncNotice(null);
     setSelected(item);
     if (item) localStorage.setItem(`jiraya.automation:${accountId}`, item.id);
-    setDebugError(""); setHistory([]);
+    debugGeneration.current++;
+    setDebugError(""); setDebugBusy(false);
     setPreview(null);
     setRunResult(null);
     setExecutionDraft("");
@@ -298,6 +298,7 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
       setDraft(toInput(saved));
       setIsDirty(false);
       setLastSavedAt(saved.updated_at);
+      debugGeneration.current++; setDebugBusy(false);
       setPreview(null);
       setRunResult(null);
       setExecutionDraft("");
@@ -323,16 +324,19 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
 
   async function testLatestEmail() {
     if (!selected || selected.source !== "gmail" || debugBusy) return;
+    const generation = ++debugGeneration.current;
+    setPreview(null); setRunResult(null); setExecutionDraft("");
     setDebugBusy(true); setDebugError("");
     setStatus("Debug: testing latest Gmail...");
     try {
       const result = await api.previewGmail(selected.id);
+      if (generation !== debugGeneration.current) return;
       setPreview(result);
       setStatus(result.match?.matches ? "Latest email matched" : "Latest email did not match");
     } catch (error: any) {
-      setStatus(`Preview failed: ${error.message}`); setDebugError(error.message);
+      if (generation === debugGeneration.current) {setStatus(`Preview failed: ${error.message}`); setDebugError(error.message);}
     }
-    finally {setDebugBusy(false);}
+    finally {if (generation === debugGeneration.current) setDebugBusy(false);}
   }
 
   async function runLatestEmail(force = false, messageId?: string) {
@@ -357,18 +361,21 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
       } catch (error: any) { setStatus(`Calendar sync failed: ${error.message}`); }
       return;
     }
+    const generation = ++debugGeneration.current;
+    setPreview(null); setRunResult(null); setExecutionDraft("");
     setDebugBusy(true); setDebugError("");
     setStatus("Debug: running automation on selected Gmail...");
     try {
       const result = await api.runGmailAutomation(selected.id, messageId || undefined, force);
+      if (generation !== debugGeneration.current) return;
       setRunResult(result);
       setExecutionDraft(result.execution?.draft_body ?? "");
       setStatus(`Execution: ${nice(result.decision)}`);
       await refreshOperations();
     } catch (error: any) {
-      setStatus(`Execution failed: ${error.message}`); setDebugError(error.message);
+      if (generation === debugGeneration.current) {setStatus(`Execution failed: ${error.message}`); setDebugError(error.message);}
     }
-    finally {setDebugBusy(false);}
+    finally {if (generation === debugGeneration.current) setDebugBusy(false);}
   }
 
   async function approveExecution() {
