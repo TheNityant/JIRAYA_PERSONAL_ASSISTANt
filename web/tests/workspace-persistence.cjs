@@ -69,17 +69,29 @@ async function main(){
   await page.getByRole('button',{name:'Quick start guide',exact:true}).click();await page.getByRole('dialog').waitFor();
   await page.getByRole('button',{name:'Close quick start guide',exact:true}).click();
   await page.getByRole('button',{name:/Saved email to Calendar/}).click();
-  assert.equal(await page.getByRole('region',{name:'Automation testing and execution'}).count(),0);
+  const debug=page.getByRole('region',{name:'Automation testing and execution'});await debug.waitFor();
   await page.getByText('Fixture: missing meeting start time',{exact:true}).waitFor();
   if(process.env.JIRAYA_UI_SCREENSHOT)await page.screenshot({path:process.env.JIRAYA_UI_SCREENSHOT});
   await page.getByRole('button',{name:'Retry this email',exact:true}).click();
   await page.getByRole('button',{name:'Approve & Create event',exact:true}).waitFor();
   assert.deepEqual(calls.at(-1).body,{message_id:'prior-email',force:true});
+  await debug.getByRole('button',{name:'Choose inbox email',exact:true}).click();
+  await debug.getByLabel('Source email',{exact:true}).selectOption('chosen-email');
+  await debug.getByRole('button',{name:'Debug · Test match',exact:true}).click();
+  await page.getByText('Fixture match',{exact:false}).waitFor();
+  assert(calls.at(-1).path.endsWith('/preview/gmail'));assert.deepEqual(calls.at(-1).body,{message_id:'chosen-email'});
+  await debug.getByRole('button',{name:'Execute',exact:true}).click();
+  await page.getByRole('button',{name:'Approve & Create event',exact:true}).waitFor();
+  assert(calls.at(-1).path.endsWith('/run/gmail'));assert.deepEqual(calls.at(-1).body,{message_id:'chosen-email',force:false});
+  await page.getByRole('textbox',{name:'Name',exact:true}).fill('Unsaved rule changes');
+  assert.equal(await debug.getByRole('button',{name:'Debug · Test match',exact:true}).isEnabled(),false);
+  assert.equal(await debug.getByRole('button',{name:'Execute',exact:true}).isEnabled(),false);
   await page.reload();await page.getByRole('heading',{name:'Saved email to Calendar',exact:true}).waitFor();await page.getByRole('button',{name:'Approve & Create event',exact:true}).waitFor();
   disconnected=true;await page.reload();await page.getByRole('heading',{name:'Saved email to Calendar',exact:true}).waitFor(); // Saved rules survive connector attention.
   disconnected=false;
   await page.evaluate(({port})=>sessionStorage.setItem('jiraya.companion.pending:saved-user',JSON.stringify({port:String(port),nonce:'a'.repeat(64),started:Date.now()})),{port:companion.address().port});
   await page.getByRole('button',{name:'GitHub',exact:true}).click();
+  assert.equal(await page.getByRole('region',{name:'Automation testing and execution'}).count(),0);
   const panel=page.getByRole('region',{name:'Local workspace checkpoint'});
   await panel.getByText('Companion connected',{exact:true}).waitFor();await panel.getByText('2 open Git projects · 2 enabled',{exact:true}).waitFor();
   assert.equal(claims,1);assert.equal(await page.evaluate(()=>!!localStorage.getItem('jiraya.companion:saved-user')),true);
@@ -93,7 +105,7 @@ async function main(){
   await page.getByRole('heading',{name:'Saved email to Calendar',exact:true}).waitFor();await page.getByRole('button',{name:'GitHub',exact:true}).click();
   await panel.getByText('2 open Git projects · 2 enabled',{exact:true}).waitFor();assert.equal(claims,1);
   user.id='another-user';await page.reload();await page.getByRole('dialog').waitFor();await page.keyboard.press('Escape');await page.getByRole('button',{name:'GitHub',exact:true}).click();await panel.getByRole('button',{name:'Connect with VS Code',exact:true}).waitFor();assert.equal(claims,1);
-  await context.close();console.log('PASS: guide steps, completion, replay, per-account memory, keyboard focus, mobile fit, test block removed, saved failure, exact-email retry, approval, refresh, disconnected-account access, handoff, two repositories and pairing retained across logout/login and isolated from another account');
+  await context.close();console.log('PASS: guide, account isolation, restored Gmail-Calendar debug and execute, selected email preview, policy-respecting run, unsaved-rule guard, saved failure retry, approval, refresh, companion handoff, Meet controls and persistent multi-repository pairing');
  }finally{
   if(browser)await browser.close();if(server){try{process.kill(-server.pid,'SIGTERM');}catch{}server.stdout.destroy();server.stderr.destroy();server.unref();}
   for(const service of [backend,companion]){service.closeAllConnections();await new Promise(resolve=>service.close(resolve));}

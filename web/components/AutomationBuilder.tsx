@@ -5,7 +5,7 @@ import GitHubWorkspace from "@/components/GitHubWorkspace";
 import { branchNameError, repositoryError } from "@/lib/github-validation";
 import CalendarWorkspace from "@/components/CalendarWorkspace";
 import AutomationCanvas from "@/components/AutomationCanvas";
-import { actionLabels, actionsFor, isConnected, routeReady, services } from "@/lib/automation-graph";
+import { actionLabels, actionsFor, calendarScheduling, isConnected, routeReady, services } from "@/lib/automation-graph";
 
 import { useEffect, useState } from "react";
 import MeetWorkspace from "./MeetWorkspace";
@@ -338,6 +338,14 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
     finally {setDebugBusy(false);}
   }
 
+  async function loadDebugInbox() {
+    if (debugBusy) return;
+    setDebugBusy(true); setDebugError("");
+    try {setInbox((await api.recentInbox()).items);}
+    catch (error: any) {setDebugError(`Could not load inbox: ${error.message}`);}
+    finally {setDebugBusy(false);}
+  }
+
   async function runLatestEmail(force = false, messageId?: string) {
     if (!selected || isSyncing || debugBusy) return;
     if (selected.source === "github") {
@@ -558,6 +566,22 @@ export default function AutomationBuilder({accountId = "local"}: {accountId?: st
             </header>
 
             {syncNotice && <div className={`sync-notice ${syncNotice.error ? "error" : ""}`} role={syncNotice.error ? "alert" : "status"}>{syncNotice.message}</div>}
+            {draft.source === "gmail" && (draft.action_config.type === "CREATE_CALENDAR_EVENT" || calendarScheduling(draft)) && (
+              <section className="automation-debug" aria-label="Automation testing and execution">
+                <div className="debug-controls">
+                  <label>Source email<select aria-label="Source email" value={debugMessageId} disabled={debugBusy} onChange={event => {setDebugMessageId(event.target.value); setPreview(null); setRunResult(null); setDebugError("");}}>
+                    <option value="">Newest inbox email</option>
+                    {debugMessageId && !inbox.some(message => message.id === debugMessageId) && <option value={debugMessageId}>{preview?.message?.subject || "Previewed email"}</option>}
+                    {inbox.map(message => <option key={message.id} value={message.id}>{message.subject || "(No subject)"} · {message.sender}</option>)}
+                  </select></label>
+                  <button className="ghost-button" disabled={debugBusy || !selected || isDirty || isSaving} onClick={loadDebugInbox}>Choose inbox email</button>
+                  <button className="secondary-button" disabled={debugBusy || !selected || isDirty || isSaving} onClick={testLatestEmail}>Debug · Test match</button>
+                  <button className="primary-button" disabled={debugBusy || !selected || isDirty || isSaving} onClick={() => runLatestEmail(false)}>Execute</button>
+                </div>
+                <p>{!selected || isDirty ? "Save this automation before testing." : debugBusy ? "Processing email…" : "Debug previews the match. Execute follows your saved approval policy; automatic actions can create an event immediately."}</p>
+                {debugError && <p role="alert">{debugError}</p>}
+              </section>
+            )}
             <AutomationCanvas draft={draft} connections={connections} onSource={selectSource} onAction={(action) => updateAction("type", action)}/>
 
             {preview && (
